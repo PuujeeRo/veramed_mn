@@ -1,0 +1,307 @@
+{
+  "_comment": "SAMPLE content. Single source for both scripts/seed-supabase.mjs (first-time database seed) and lib/data.ts (what the public site shows while Supabase is not configured yet). Products, prices and quiz copy here are placeholders, not New Veramed's real catalog - replace them from /dashboard.",
+  "company": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "slug": "veramed",
+    "name": "Нью Верамед",
+    "logo_url": "/logo.png",
+    "quiz_intro_mn": "Танд тохирох витаминыг 2 минутад олоорой.",
+    "quiz_intro_en": "Find the vitamin that fits you in 2 minutes.",
+    "about_mn": "<p><strong>Нью Верамед ХХК</strong>-ийн танилцуулга энд байрлана.</p><p>Энэ бол жишээ текст. Хяналтын самбарын «Сайтын агуулга» хэсгээс компанийн түүх, бүтээгдэхүүний онцлог, хүргэлтийн нөхцөлөө бичээрэй.</p>",
+    "about_en": "<p>The introduction of <strong>New Veramed LLC</strong> goes here.</p><p>This is sample text. Write your company story, what makes your products different and your delivery terms in the dashboard under “Site content”.</p>",
+    "contact": {
+      "facebook": "https://www.facebook.com/Vitaminjuulah.Ayn/"
+    }
+  },
+  "categories": [
+    {
+      "slug": "energy",
+      "name_mn": "Эрч хүч",
+      "name_en": "Energy"
+    },
+    {
+      "slug": "sleep",
+      "name_mn": "Нойр",
+      "name_en": "Sleep"
+    },
+    {
+      "slug": "digestion",
+      "name_mn": "Хоол боловсруулалт",
+      "name_en": "Digestion"
+    },
+    {
+      "slug": "immunity",
+      "name_mn": "Дархлаа",
+      "name_en": "Immunity"
+    },
+    {
+      "slug": "stress",
+      "name_mn": "Стресс",
+      "name_en": "Stress"
+    },
+    {
+      "slug": "joints",
+      "name_mn": "Үе мөч",
+      "name_en": "Joints / Bones"
+    },
+    {
+      "slug": "skin",
+      "name_mn": "Арьс / Үс",
+      "name_en": "Skin / Hair"
+    },
+    {
+      "slug": "weight",
+      "name_mn": "Жин",
+      "name_en": "Weight"
+    }
+  ],
+  "products": [
+    {
+      "id": "00000000-0000-4000-8000-000000000101",
+      "name_mn": "B-Комплекс",
+      "name_en": "B-Complex",
+      "description_mn": "<p>Өдрийн эрч хүчийг дэмжихэд зориулсан <strong>B бүлгийн витамины</strong> цогцолбор.</p><ul><li>Ядаргааг багасгахад дэмжлэг үзүүлж болзошгүй</li><li>Өдөрт 1 удаа, хоолны дараа</li></ul>",
+      "description_en": "<p>A <strong>B-vitamin</strong> complex made to support everyday energy.</p><ul><li>May support reduced tiredness</li><li>Once a day, after a meal</li></ul>",
+      "price": 45000,
+      "image_url": "/products/b-complex.svg",
+      "gallery_urls": [
+        "/products/b-complex.svg",
+        "/products/b-complex-2.svg",
+        "/products/b-complex-3.svg"
+      ],
+      "page_template": null,
+      "categories": [
+        "energy",
+        "stress"
+      ],
+      "include_in_quiz": true,
+      "buy_now_url": "https://m.me/Vitaminjuulah.Ayn",
+      "boost_score": 0,
+      "accent": "sun"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000102",
+      "name_mn": "Магни",
+      "name_en": "Magnesium",
+      "description_mn": "<p>Оройн цагт хэрэглэхэд тохиромжтой <strong>магнийн</strong> нэмэлт.</p><ul><li>Тайван амрахад дэмжлэг үзүүлж болзошгүй</li><li>Унтахаас 30 минутын өмнө</li></ul>",
+      "description_en": "<p>A <strong>magnesium</strong> supplement suited to the evening.</p><ul><li>May support restful sleep</li><li>30 minutes before bed</li></ul>",
+      "price": 52000,
+      "image_url": "/products/magnesium.svg",
+      "gallery_urls": [
+        "/products/magnesium.svg",
+        "/products/magnesium-2.svg"
+      ],
+      "page_template": null,
+      "categories": [
+        "sleep",
+        "stress"
+      ],
+      "include_in_quiz": true,
+      "buy_now_url": "https://m.me/Vitaminjuulah.Ayn",
+      "boost_score": 0,
+      "accent": "crimson"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000103",
+      "name_mn": "Витамин D3",
+      "name_en": "Vitamin D3",
+      "description_mn": "<p>Нарны гэрэл багатай улиралд зориулсан <strong>D3 витамин</strong>.</p><ul><li>Дархлаа, ясны эрүүл мэндэд дэмжлэг үзүүлж болзошгүй</li><li>Өдөрт 1 удаа</li></ul>",
+      "description_en": "<p><strong>Vitamin D3</strong> for the months with little sunlight.</p><ul><li>May support immunity and bone health</li><li>Once a day</li></ul>",
+      "price": 28000,
+      "image_url": "/products/vitamin-d3.svg",
+      "gallery_urls": null,
+      "page_template": null,
+      "categories": [
+        "immunity",
+        "joints"
+      ],
+      "include_in_quiz": true,
+      "buy_now_url": "https://m.me/Vitaminjuulah.Ayn",
+      "boost_score": 0,
+      "accent": "sunset"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000104",
+      "name_mn": "Пробиотик",
+      "name_en": "Probiotic",
+      "description_mn": "<p>Хоол боловсруулалтад зориулсан <strong>пробиотик</strong>.</p><ul><li>Гэдэсний тав тухад дэмжлэг үзүүлж болзошгүй</li><li>Хоолны дараа</li></ul>",
+      "description_en": "<p>A <strong>probiotic</strong> made for digestion.</p><ul><li>May support digestive comfort</li><li>After a meal</li></ul>",
+      "price": 61000,
+      "image_url": "/products/probiotic.svg",
+      "gallery_urls": [
+        "/products/probiotic.svg",
+        "/products/probiotic-2.svg",
+        "/products/probiotic-3.svg"
+      ],
+      "page_template": null,
+      "categories": [
+        "digestion",
+        "weight"
+      ],
+      "include_in_quiz": true,
+      "buy_now_url": "https://m.me/Vitaminjuulah.Ayn",
+      "boost_score": 0,
+      "accent": "sage"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000105",
+      "name_mn": "Коллаген",
+      "name_en": "Collagen",
+      "description_mn": "<p>Арьс, үсэнд зориулсан <strong>коллаген</strong>.</p><ul><li>Арьсны чийгшилд дэмжлэг үзүүлж болзошгүй</li><li>Өглөө, усанд уусгаж ууна</li></ul>",
+      "description_en": "<p><strong>Collagen</strong> for skin and hair.</p><ul><li>May support skin hydration</li><li>In the morning, dissolved in water</li></ul>",
+      "price": 68000,
+      "image_url": "/products/collagen.svg",
+      "gallery_urls": [
+        "/products/collagen.svg",
+        "/products/collagen-2.svg"
+      ],
+      "page_template": null,
+      "categories": [
+        "skin"
+      ],
+      "include_in_quiz": true,
+      "buy_now_url": "https://m.me/Vitaminjuulah.Ayn",
+      "boost_score": 0,
+      "accent": "sky"
+    }
+  ],
+  "questions": [
+    {
+      "id": "00000000-0000-4000-8000-000000000201",
+      "text_mn": "Та юунд хамгийн их дэмжлэг авахыг хүсэж байна вэ?",
+      "text_en": "What would you most like support with?",
+      "answers": [
+        {
+          "text_mn": "Өдрийн эрч хүч",
+          "text_en": "Daytime energy",
+          "category": "energy",
+          "points": 2
+        },
+        {
+          "text_mn": "Тайван нойр",
+          "text_en": "Restful sleep",
+          "category": "sleep",
+          "points": 2
+        },
+        {
+          "text_mn": "Дархлаа",
+          "text_en": "Immunity",
+          "category": "immunity",
+          "points": 2
+        },
+        {
+          "text_mn": "Хоол боловсруулалт",
+          "text_en": "Digestion",
+          "category": "digestion",
+          "points": 2
+        },
+        {
+          "text_mn": "Арьс, үс",
+          "text_en": "Skin and hair",
+          "category": "skin",
+          "points": 2
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000202",
+      "text_mn": "Өдрийн турш хэр их ядардаг вэ?",
+      "text_en": "How tired do you get during the day?",
+      "answers": [
+        {
+          "text_mn": "Байнга ядардаг",
+          "text_en": "Tired most of the time",
+          "category": "energy",
+          "points": 2
+        },
+        {
+          "text_mn": "Заримдаа",
+          "text_en": "Sometimes",
+          "category": "energy",
+          "points": 1
+        },
+        {
+          "text_mn": "Бараг ядардаггүй",
+          "text_en": "Hardly ever",
+          "category": "energy",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000203",
+      "text_mn": "Шөнө хэр сайн унтдаг вэ?",
+      "text_en": "How well do you sleep at night?",
+      "answers": [
+        {
+          "text_mn": "Унтаж чаддаггүй, олон сэрдэг",
+          "text_en": "Poorly, I wake up often",
+          "category": "sleep",
+          "points": 2
+        },
+        {
+          "text_mn": "Дунд зэрэг",
+          "text_en": "So-so",
+          "category": "sleep",
+          "points": 1
+        },
+        {
+          "text_mn": "Сайн унтдаг",
+          "text_en": "I sleep well",
+          "category": "sleep",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000204",
+      "text_mn": "Улирал солигдоход амархан ханиад хүрдэг үү?",
+      "text_en": "Do you catch colds easily when the season changes?",
+      "answers": [
+        {
+          "text_mn": "Тийм, байнга",
+          "text_en": "Yes, often",
+          "category": "immunity",
+          "points": 2
+        },
+        {
+          "text_mn": "Заримдаа",
+          "text_en": "Sometimes",
+          "category": "immunity",
+          "points": 1
+        },
+        {
+          "text_mn": "Үгүй",
+          "text_en": "No",
+          "category": "immunity",
+          "points": 0
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000205",
+      "text_mn": "Хоолны дараа гэдэс дүүрч, эвгүй оргидог уу?",
+      "text_en": "Do you feel bloated or uncomfortable after meals?",
+      "answers": [
+        {
+          "text_mn": "Тийм, байнга",
+          "text_en": "Yes, often",
+          "category": "digestion",
+          "points": 2
+        },
+        {
+          "text_mn": "Заримдаа",
+          "text_en": "Sometimes",
+          "category": "digestion",
+          "points": 1
+        },
+        {
+          "text_mn": "Үгүй",
+          "text_en": "No",
+          "category": "digestion",
+          "points": 0
+        }
+      ]
+    }
+  ]
+}

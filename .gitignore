@@ -1,0 +1,22 @@
+# Dependencies / build output
+node_modules/
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# Secrets. .env.local holds the Supabase secret key and the database
+# password — one accidental commit leaks them, and deleting the file later
+# does NOT remove it from git history.
+.env
+.env.*
+!.env.example
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.log
+
+# Windows shell crash dumps (grep.exe.stackdump and friends)
+*.stackdump

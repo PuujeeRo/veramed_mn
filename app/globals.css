@@ -1,0 +1,350 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Semantic colour tokens. Light is the default; `.dark` on <html> swaps
+   them, so components use `bg-surface` / `text-fg` and never need a
+   `dark:` variant. See components/ThemeProvider.tsx. */
+:root {
+  /* New Veramed's logo runs dark red → red → orange → yellow. Red is the
+     working colour (buttons, links, focus); the full run is kept for the
+     .brand-gradient accent below. 500 is the logo's own red (#E62F34) and
+     700 its darkest red (#881011), both sampled from the logo file. 600 is
+     a step darker than 500 so white button text clears 4.5:1 contrast. */
+  --brand-50: 254 243 242;
+  --brand-100: 253 228 226;
+  --brand-200: 251 204 201;
+  --brand-500: 230 47 52;
+  --brand-600: 200 32 38;
+  --brand-700: 136 16 17;
+
+  --brand-grad-1: 136 16 17;
+  --brand-grad-2: 230 47 52;
+  --brand-grad-3: 245 133 47;
+  --brand-grad-4: 249 223 31;
+
+  --page: 250 250 249;
+  --surface: 255 255 255;
+  --subtle: 244 244 243;
+  --line: 229 229 226;
+  --line-strong: 205 205 200;
+  --shadow: 41 37 36;
+  --fg: 28 25 23;
+  --fg-muted: 87 83 78;
+  --fg-faint: 148 146 143;
+}
+
+.dark {
+  /* Brand reds for dark surfaces: tints become deep reds, and 700 (used as
+     text) flips to a light coral so it stays readable. */
+  --brand-50: 42 20 20;
+  --brand-100: 58 24 24;
+  --brand-200: 92 32 33;
+  --brand-500: 240 84 86;
+  --brand-600: 214 48 54;
+  --brand-700: 255 158 148;
+
+  --page: 13 15 17;
+  --surface: 24 27 30;
+  --subtle: 32 36 40;
+  --line: 46 51 57;
+  --line-strong: 70 76 84;
+  --shadow: 0 0 0;
+  --fg: 237 238 240;
+  --fg-muted: 174 178 184;
+  --fg-faint: 124 130 138;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: rgb(var(--page));
+  color: rgb(var(--fg));
+  /* Mongolian has long unbreakable compounds ("Бүтээгдэхүүний") that
+     overflow narrow screens at display sizes. The narrowest real target
+     is a folded Galaxy Z Fold cover screen at 280px. */
+  overflow-wrap: break-word;
+}
+
+/* No single orphaned word on a heading's last line — matters more in MN,
+   where long compounds make ragged wraps common. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  font-family: var(--font-display), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.015em;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* One visible keyboard-focus style everywhere, instead of the browser
+   default on some controls and nothing on others. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--brand-500));
+  outline-offset: 2px;
+}
+
+/* The logo's own colour run, for thin accents (the strip above the site
+   header). Not for text or large fills — yellow on white is unreadable. */
+.brand-gradient {
+  background-image: linear-gradient(
+    90deg,
+    rgb(var(--brand-grad-1)),
+    rgb(var(--brand-grad-2)) 38%,
+    rgb(var(--brand-grad-3)) 72%,
+    rgb(var(--brand-grad-4))
+  );
+}
+
+/* ---- Product colour themes (lib/accents.ts) ----
+   Each sets a two-stop colour (--accent-1 deep, --accent-2 bright), a soft
+   tint for tiles (--accent-soft), the ink that reads on the strong colour
+   (--accent-ink) and the order-button colours used on it (--accent-cta*).
+   The concept design's look: every product owns a colour. */
+.accent-crimson {
+  --accent-1: 136 16 17;
+  --accent-2: 214 38 56;
+  --accent-soft: 252 232 233;
+  --accent-ink: 255 255 255;
+  --accent-cta: 249 223 31;
+  --accent-cta-ink: 41 20 8;
+}
+.accent-sunset {
+  --accent-1: 196 62 24;
+  --accent-2: 245 133 47;
+  --accent-soft: 254 236 222;
+  --accent-ink: 255 255 255;
+  --accent-cta: 255 255 255;
+  --accent-cta-ink: 120 36 12;
+}
+.accent-sun {
+  --accent-1: 236 168 16;
+  --accent-2: 250 214 40;
+  --accent-soft: 254 246 206;
+  --accent-ink: 46 30 6;
+  --accent-cta: 30 22 10;
+  --accent-cta-ink: 255 255 255;
+}
+.accent-sky {
+  --accent-1: 58 104 146;
+  --accent-2: 116 160 198;
+  --accent-soft: 226 237 246;
+  --accent-ink: 255 255 255;
+  --accent-cta: 249 223 31;
+  --accent-cta-ink: 30 26 8;
+}
+.accent-sage {
+  --accent-1: 38 98 72;
+  --accent-2: 96 160 110;
+  --accent-soft: 224 240 228;
+  --accent-ink: 255 255 255;
+  --accent-cta: 255 255 255;
+  --accent-cta-ink: 24 70 50;
+}
+/* Tints that sit on the page get darker in the dark theme; the strong
+   hero colours stay as they are. */
+.dark .accent-crimson { --accent-soft: 62 22 26; }
+.dark .accent-sunset { --accent-soft: 64 34 20; }
+.dark .accent-sun { --accent-soft: 60 50 16; }
+.dark .accent-sky { --accent-soft: 26 42 58; }
+.dark .accent-sage { --accent-soft: 22 46 34; }
+
+/* Soft tile behind a product photo (catalog, preview). */
+.accent-tile {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / 0.55), transparent 60%),
+    rgb(var(--accent-soft));
+}
+.dark .accent-tile {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / 0.06), transparent 60%),
+    rgb(var(--accent-soft));
+}
+
+/* The strong colour block (Showcase hero, thumbnails). */
+.accent-hero {
+  background:
+    radial-gradient(60% 70% at 50% 45%, rgb(var(--accent-2)), transparent 75%),
+    linear-gradient(160deg, rgb(var(--accent-2)), rgb(var(--accent-1)));
+  color: rgb(var(--accent-ink));
+}
+
+.accent-swatch {
+  background: linear-gradient(135deg, rgb(var(--accent-2)), rgb(var(--accent-1)));
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+
+/* Content placed ON the strong colour: re-point the theme tokens, so the
+   shared product blocks (title, price, description…) render in the
+   accent's ink without each block knowing it's on a coloured background. */
+.on-accent {
+  --fg: var(--accent-ink);
+  --fg-muted: var(--accent-ink);
+  --fg-faint: var(--accent-ink);
+  --brand-700: var(--accent-ink);
+}
+
+/* Form, surface and button primitives — one definition of what an input,
+   a card and a button look like, used by the dashboard and the visitor
+   site alike, instead of the same utility string hand-copied into every
+   editor (and drifting). */
+@layer components {
+  /* ---- Inputs ---- */
+  .field {
+    @apply block h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-fg shadow-xs transition-[border-color,box-shadow] placeholder:text-fg-faint hover:border-line-strong focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15 disabled:cursor-not-allowed disabled:bg-subtle disabled:text-fg-muted;
+  }
+
+  textarea.field {
+    @apply h-auto py-2.5 leading-relaxed;
+  }
+
+  select.field {
+    @apply cursor-pointer pr-8;
+  }
+
+  .field-invalid {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/15;
+  }
+
+  /* Denser variant for inputs packed into a row (quiz answers, categories). */
+  .field-sm {
+    @apply h-9 rounded-md px-2.5;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-[0.8125rem] font-medium text-fg;
+  }
+
+  .field-hint {
+    @apply mt-1.5 text-xs leading-relaxed text-fg-muted;
+  }
+
+  .field-error {
+    @apply mt-1.5 text-xs font-medium text-red-600 dark:text-red-400;
+  }
+
+  /* ---- Surfaces ---- */
+  .panel {
+    @apply rounded-xl border border-line bg-surface p-4 shadow-card sm:p-6;
+  }
+
+  .panel-title {
+    @apply text-[0.9375rem] font-semibold tracking-tight text-fg;
+  }
+
+  .card {
+    @apply rounded-xl border border-line bg-surface shadow-card;
+  }
+
+  /* ---- Buttons ----
+     Rectangular with a soft radius, not pills: these are tools, used many
+     times a day. The visitor site's few hero CTAs set their own shape. */
+  .btn {
+    @apply inline-flex h-10 shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-sm {
+    @apply h-8 gap-1.5 rounded-md px-3 text-[0.8125rem];
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-600 text-white shadow-xs hover:bg-brand-700 dark:hover:bg-brand-500;
+  }
+
+  .btn-secondary {
+    @apply btn border border-line bg-surface text-fg shadow-xs hover:border-line-strong hover:bg-subtle;
+  }
+
+  .btn-ghost {
+    @apply btn text-fg-muted hover:bg-subtle hover:text-fg;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 text-white shadow-xs hover:bg-red-700;
+  }
+
+  .icon-btn {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-fg-muted transition hover:bg-subtle hover:text-fg disabled:pointer-events-none disabled:opacity-40;
+  }
+
+  /* ---- Small type ---- */
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-[0.08em] text-fg-faint;
+  }
+
+  .kbd {
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-line bg-subtle px-1 font-sans text-[0.6875rem] font-medium text-fg-muted;
+  }
+}
+
+/* Rich-text (Lexical) output inside product descriptions and a brand's
+   About copy. Tailwind's reset strips paragraph spacing and list markers,
+   and there is no typography plugin here — so without these a manager's
+   paragraphs run together and their bullet lists lose their bullets.
+   Covers exactly the tags lib/sanitize.ts lets through. */
+.prose {
+  line-height: 1.65;
+}
+
+.prose :where(p, ul, ol, h1, h2, h3) + :where(p, ul, ol, h1, h2, h3) {
+  margin-top: 0.75em;
+}
+
+.prose :where(h1, h2, h3) {
+  color: rgb(var(--fg));
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.prose :where(h1, h2) {
+  font-size: 1.125rem;
+}
+
+.prose :where(strong) {
+  color: rgb(var(--fg));
+  font-weight: 600;
+}
+
+.prose :where(ul, ol) {
+  padding-left: 1.25em;
+}
+
+.prose :where(ul) {
+  list-style: disc;
+}
+
+.prose :where(ol) {
+  list-style: decimal;
+}
+
+.prose :where(li) + :where(li) {
+  margin-top: 0.25em;
+}
+
+.prose :where(a) {
+  color: rgb(var(--brand-600));
+  text-decoration: underline;
+}
