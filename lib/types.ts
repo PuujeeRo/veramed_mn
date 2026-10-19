@@ -14,9 +14,26 @@ export interface Category {
   name_en: string;
 }
 
+/** One of the company's quizzes. Visitors open it at /quiz/{slug}; /quiz
+ *  shows the main one (the first published by `order`). It recommends only
+ *  from its own products. */
+export interface Quiz {
+  id: string;
+  brandId: string;
+  slug: string;
+  /** The headline on the quiz's intro screen. */
+  title_mn: string;
+  title_en?: string;
+  status: "active" | "inactive";
+  order: number;
+  productIds: string[];
+  questions: QuizQuestion[];
+}
+
 export interface QuizQuestion {
   id: string;
   brandId: string;
+  quizId: string;
   order: number;
   text_mn: string;
   text_en: string;
@@ -48,9 +65,9 @@ export interface Product {
   pageTemplate?: PageTemplate;
   /** Colour theme for the page hero and catalog tile — lib/accents.ts. */
   accent?: ProductAccent;
-  /** Category slugs this product helps with — what the quiz matches on. */
+  /** Category slugs this product helps with — what the quiz matches on.
+   *  Which quizzes may suggest it is Quiz.productIds, not a field here. */
   categories: string[];
-  includeInQuiz: boolean;
   /** Where "order" sends the visitor: the company's store, Messenger, etc. */
   buyNowUrl?: string;
   /** Tie-break order among products the quiz already matched (0–100). */
@@ -78,7 +95,8 @@ export interface Brand {
   slug: string;
   name: string;
   logoUrl: string;
-  /** One-line tagline: the home page headline and the quiz intro. */
+  /** One-line tagline: the home page headline. Each quiz has its own
+   *  title for its intro (Quiz.title_mn). */
   quizIntro_mn: string;
   quizIntro_en?: string; // optional, falls back to MN
   /** About copy, HTML from the Lexical editor. */

@@ -23,14 +23,14 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 import { MdQrCode2 } from "react-icons/md";
-import { Category, PageTemplate, Product } from "@/lib/types";
+import { Category, PageTemplate, Product, Quiz } from "@/lib/types";
 import { getCategories } from "@/lib/categories";
 import { TEMPLATES, DEFAULT_TEMPLATE } from "@/lib/templates";
 import { ACCENTS, DEFAULT_ACCENT, ProductAccent, accentClass } from "@/lib/accents";
 import { parseVideoUrl } from "@/lib/video";
 import { onImageError } from "@/lib/media";
 import { localized, useLanguage } from "@/lib/i18n";
-import { useRouter } from "@/lib/navigation";
+import { Link, useRouter } from "@/lib/navigation";
 import { useOrigin } from "@/lib/useOrigin";
 import ImageUploadField from "./ImageUploadField";
 import RichTextEditor from "./RichTextEditor";
@@ -53,8 +53,10 @@ const MAX_GALLERY = 6;
 
 const isHttpUrl = (v: string) => v === "" || /^https?:\/\/\S+$/i.test(v);
 
-function fromProduct(p: Product) {
+function fromProduct(p: Product, quizzes: Quiz[]) {
   return {
+    // Sorted so toggling one off and on again reads as unchanged.
+    quizIds: quizzes.filter((q) => q.productIds.includes(p.id)).map((q) => q.id).sort(),
     nameMn: p.name_mn,
     nameEn: p.name_en ?? "",
     price: p.price,
@@ -68,7 +70,6 @@ function fromProduct(p: Product) {
     instagram: p.social?.instagram ?? "",
     phone: p.contact?.phone ?? "",
     whatsapp: p.contact?.whatsapp ?? "",
-    includeInQuiz: p.includeInQuiz,
     categories: p.categories,
     pageTemplate: (p.pageTemplate ?? DEFAULT_TEMPLATE) as PageTemplate,
     accent: (p.accent ?? DEFAULT_ACCENT) as ProductAccent,
@@ -77,12 +78,12 @@ function fromProduct(p: Product) {
   };
 }
 
-export default function ProductEditor({ product }: { product: Product }) {
+export default function ProductEditor({ product, quizzes }: { product: Product; quizzes: Quiz[] }) {
   const { locale, t } = useLanguage();
   const router = useRouter();
   const origin = useOrigin();
   const toast = useToast();
-  const form = useFormState(fromProduct(product));
+  const form = useFormState(fromProduct(product, quizzes));
   const v = form.values;
   const set = form.set;
 
@@ -120,10 +121,15 @@ export default function ProductEditor({ product }: { product: Product }) {
   const video = useMemo(() => (v.videoUrl.trim() ? parseVideoUrl(v.videoUrl.trim()) : null), [v.videoUrl]);
   const displayName = localized(locale, v.nameMn || product.name_mn, v.nameEn);
   const publicUrl = origin ? `${origin}/p/${product.id}` : `/p/${product.id}`;
-  const quizReady = v.includeInQuiz && v.categories.length > 0;
+  const inQuiz = v.quizIds.length > 0;
+  const quizReady = inQuiz && v.categories.length > 0;
 
   function toggleCategory(slug: string) {
     set("categories", v.categories.includes(slug) ? v.categories.filter((c) => c !== slug) : [...v.categories, slug]);
+  }
+
+  function toggleQuiz(id: string) {
+    set("quizIds", (v.quizIds.includes(id) ? v.quizIds.filter((q) => q !== id) : [...v.quizIds, id]).sort());
   }
 
   async function handleSave() {
@@ -146,7 +152,7 @@ export default function ProductEditor({ product }: { product: Product }) {
           contact: { phone: v.phone.trim(), whatsapp: v.whatsapp.trim() },
           description_mn: v.descMn,
           description_en: v.descEn,
-          includeInQuiz: v.includeInQuiz,
+          quizIds: v.quizIds,
           categories: v.categories,
           pageTemplate: v.pageTemplate,
           accent: v.accent,
@@ -354,12 +360,42 @@ export default function ProductEditor({ product }: { product: Product }) {
             </div>
           </Section>
 
-          <Section
-            title={t("prodEd.sectionQuiz")}
-            description={t("prodEd.quizBody")}
-            aside={<Switch checked={v.includeInQuiz} onChange={(on) => set("includeInQuiz", on)} label={t("prodEd.includeInQuiz")} />}
-          >
-            <p className="field-label">{t("prodEd.categories")}</p>
+          <Section title={t("prodEd.sectionQuiz")} description={t("prodEd.quizBody")}>
+            <p className="field-label">{t("prodEd.quizzes")}</p>
+            {quizzes.length === 0 ? (
+              <p className="text-sm text-fg-muted">
+                {t("prodEd.noQuizzes")}{" "}
+                <Link href="/dashboard?tab=quiz" className="font-medium text-brand-600 hover:text-brand-700">
+                  {t("quizList.add")}
+                </Link>
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {quizzes.map((q) => {
+                  const on = v.quizIds.includes(q.id);
+                  return (
+                    <button
+                      key={q.id}
+                      type="button"
+                      onClick={() => toggleQuiz(q.id)}
+                      aria-pressed={on}
+                      className={`inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition active:scale-95 ${
+                        on
+                          ? "border-brand-600 bg-brand-600 text-white"
+                          : "border-line bg-surface text-fg-muted hover:border-line-strong hover:text-fg"
+                      }`}
+                    >
+                      {on && <FiCheck size={13} className="shrink-0" />}
+                      <span className="truncate">{localized(locale, q.title_mn, q.title_en)}</span>
+                      {q.status !== "active" && <span className={`shrink-0 text-xs ${on ? "text-white/75" : "text-fg-faint"}`}>· {t("dash.statusHidden")}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <p className="field-hint">{t("prodEd.quizzesHint")}</p>
+
+            <p className="field-label mt-6">{t("prodEd.categories")}</p>
             {categoryList.length === 0 ? (
               <div className="flex gap-2" aria-hidden="true">
                 {[0, 1, 2, 3].map((i) => (
@@ -389,14 +425,14 @@ export default function ProductEditor({ product }: { product: Product }) {
                 })}
               </div>
             )}
-            {v.includeInQuiz && v.categories.length === 0 && (
+            {inQuiz && v.categories.length === 0 && (
               <p className="mt-3 flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
                 <FiAlertTriangle size={15} className="mt-0.5 shrink-0" />
                 {t("prodEd.noCategoryWarning")}
               </p>
             )}
 
-            <div className={`mt-6 border-t border-line pt-5 ${v.includeInQuiz ? "" : "opacity-50"}`}>
+            <div className={`mt-6 border-t border-line pt-5 ${inQuiz ? "" : "opacity-50"}`}>
               <Field
                 label={t("prodEd.boost")}
                 htmlFor="p-boost"
@@ -410,7 +446,7 @@ export default function ProductEditor({ product }: { product: Product }) {
                   max={100}
                   step={5}
                   value={v.boostScore}
-                  disabled={!v.includeInQuiz}
+                  disabled={!inQuiz}
                   onChange={(e) => set("boostScore", Number(e.target.value))}
                   className="h-2 w-full cursor-pointer accent-brand-600 disabled:cursor-not-allowed"
                 />

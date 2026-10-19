@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { FiBarChart2, FiRefreshCw } from "react-icons/fi";
-import { Brand, Product } from "@/lib/types";
+import { Brand, Product, Quiz } from "@/lib/types";
 import { getBrandStats, ProductStats, QuizFunnel } from "@/lib/stats";
 import { localized, useLanguage } from "@/lib/i18n";
 import { onImageError } from "@/lib/media";
@@ -22,12 +22,15 @@ import EmptyState from "./ui/EmptyState";
 interface StatsPanelProps {
   brand: Brand;
   products: Product[];
+  /** Which products a quiz can recommend at all — "—" instead of 0 for the rest. */
+  quizzes: Quiz[];
 }
 
 const emptyStats: ProductStats = { views: 0, webViews: 0, qrViews: 0, clicks: 0, recommended: 0 };
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
-export default function StatsPanel({ brand, products }: StatsPanelProps) {
+export default function StatsPanel({ brand, products, quizzes }: StatsPanelProps) {
+  const inAnyQuiz = new Set(quizzes.flatMap((q) => q.productIds));
   const { locale, t } = useLanguage();
   const [funnel, setFunnel] = useState<QuizFunnel>({ started: 0, completed: 0 });
   const [productStats, setProductStats] = useState<Record<string, ProductStats>>({});
@@ -173,7 +176,7 @@ export default function StatsPanel({ brand, products }: StatsPanelProps) {
                       <td className="px-3 py-2.5 text-right tabular-nums text-fg">{s.clicks.toLocaleString("en-US")}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums text-fg-muted">{s.views > 0 ? `${pct(s.clicks, s.views)}%` : "—"}</td>
                       <td className="py-2.5 pl-3 pr-4 text-right tabular-nums text-fg-muted sm:pr-6">
-                        {p.includeInQuiz || s.recommended > 0 ? s.recommended.toLocaleString("en-US") : "—"}
+                        {inAnyQuiz.has(p.id) || s.recommended > 0 ? s.recommended.toLocaleString("en-US") : "—"}
                       </td>
                     </tr>
                   ))}

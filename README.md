@@ -29,7 +29,8 @@ Use a **new** Supabase project — never another app's (the schema creates
 tables named `brands`, `products`, `profiles`, …).
 
 1. Copy `.env.example` to `.env.local` and fill it in.
-2. `node scripts/apply-schema.mjs` — creates the tables.
+2. `node scripts/apply-schema.mjs` — creates the tables. Safe to re-run;
+   run it again after pulling a change to `supabase/schema.sql`.
 3. `node scripts/seed-supabase.mjs` — creates the company row and the sample
    products/quiz. Safe to re-run: it skips anything that already has content.
 4. `node scripts/seed-auth.mjs` — creates the manager account from
@@ -38,6 +39,13 @@ tables named `brands`, `products`, `profiles`, …).
    `{SITE_URL}/api/auth/callback` to the redirect allow-list (used when a
    manager changes their email).
 
+**Upgrading a database from before multiple quizzes:** run
+`node scripts/migrate-quizzes.mjs` *before* deploying the new code. It adds
+the quiz tables and columns (additive only — it never touches anything
+else), then moves the existing questions into a main quiz with the products
+that were in the quiz, so visitors see the same quiz as before. Safe to
+re-run.
+
 ## Pages
 
 | Path | What |
@@ -45,7 +53,8 @@ tables named `brands`, `products`, `profiles`, …).
 | `/` | Home: tagline, the quiz's first question, products, about preview |
 | `/products` | Full catalog, filterable by category |
 | `/p/{id}` | One product (the link the dashboard copies / prints as QR) |
-| `/quiz` | The recommendation quiz — anonymous, no account |
+| `/quiz` | The main recommendation quiz — anonymous, no account |
+| `/quiz/{slug}` | One particular quiz (the link the dashboard copies / prints as QR) |
 | `/about`, `/contact`, `/privacy` | Company pages |
 | `/login` | Manager sign-in (linked quietly from the footer) |
 | `/dashboard` | Manager: products, quiz, site content, stats |
@@ -57,8 +66,10 @@ Mongolian is the default and unprefixed; English lives under `/en/...`.
 
 - **Products** — add, edit, publish/hide, delete; gallery, video, order
   link, page template; copy link and QR code per product; edit categories.
-- **Quiz** — write questions and answers; each answer adds points to a
-  category, and the quiz recommends products tagged with the top category.
+- **Quizzes** — run several, each with its own link, questions and
+  products; publish/hide each one and pick the main one (`/quiz`). Each
+  answer adds points to a category, and the quiz recommends its own
+  products tagged with the top category.
 - **Site content** — company name, logo, tagline, About text, contact details.
 - **Stats** — quiz starts/completions, product views (web vs QR), order clicks.
 

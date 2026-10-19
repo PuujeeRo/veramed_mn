@@ -17,12 +17,14 @@ npx tsc --noEmit -p . # fast type-check
 
 node scripts/apply-schema.mjs      # apply supabase/schema.sql to the DB in .env.local (idempotent)
 node scripts/seed-supabase.mjs     # first-time company row + sample products/quiz (skips tables that have data)
+node scripts/migrate-quizzes.mjs   # one-time: move pre-multi-quiz questions into a main quiz (idempotent)
 node scripts/seed-auth.mjs         # create the manager account from SEED_MANAGER_* in .env.local
 node scripts/gen-placeholders.mjs  # regenerate the sample product SVGs in public/products
 ```
 
 **Current dev database is shared with urgoods.** The local `.env.local` points at the urgoods *test* Supabase project (`D:\Projects\ur_goods_com`); only the UI differs. `NEXT_PUBLIC_COMPANY_ID` is set to urgoods' demo "Brand A" row, and sign-in uses the urgoods Brand A manager account. While that is the case:
 - **Do not run `apply-schema.mjs`, `seed-supabase.mjs` or `seed-auth.mjs`** — urgoods owns that schema, its RLS policies and its seed data.
+- To give it the quiz tables, run `migrate-quizzes.mjs` — it adds only the quiz tables/columns/policies (all `if not exists`) and is the one script that's safe there.
 - The shared DB lacks two veramed-only columns, `brands.contact` and `products.accent`. Reads work; saving site content or a product edit fails until they are added (nullable, additive — harmless to urgoods).
 - Moving to veramed's own Supabase project later = new keys in `.env.local`, drop `NEXT_PUBLIC_COMPANY_ID`, then run the three scripts above.
 
@@ -40,7 +42,7 @@ There is no test suite. Verification is `npm run build` plus checking pages in a
 
 **Write path.** Every write goes through an `app/api/**` route that calls `getSessionProfile()` + `canManageBrand()` (`lib/auth.ts`) itself, validates with zod, then writes with `supabaseAdmin` (service role). Middleware guards navigation only; RLS write policies are defense in depth. Rich text is sanitized server-side (`lib/sanitize.ts`); URL fields that end up in an `href` are validated as http(s). There is no public signup — accounts only come from `scripts/seed-auth.mjs`, and `/api/auth/callback` never creates a `profiles` row.
 
-**Quiz.** Each quiz answer adds `points` to a category slug. `lib/scoring.ts` (pure — takes questions and products as arguments, never fetches) sums points, takes the top category plus any within one point, and returns published, quiz-enabled products tagged with those categories, ordered by `boostScore`. `QuizFlow` shows the top 1–2 in `ProductCard` (results are never templated, so they stay comparable). The quiz editor saves the whole question set in one `PUT` (server assigns ids; the new set is inserted before the old one is deleted).
+**Quizzes.** The company runs several quizzes (`quizzes` table). Each has its own questions (`quiz_questions.quiz_id`), its own products (`quiz_products`, many-to-many — a product can be in several), a `slug`, and published/hidden `status`. Visitors open one at `/quiz/{slug}`; `/quiz` and the home page use the **main** quiz = the first published one by `order` (`getQuiz()` in `lib/data.ts`; "Make main" moves a quiz to the front). Membership in `quiz_products` is the only thing that puts a product in a quiz — `products.include_in_quiz` is a leftover column read only by `scripts/migrate-quizzes.mjs`. Each answer adds `points` to a category slug. `lib/scoring.ts` (pure — never fetches) narrows products to the quiz's pool (`quizPool`: its own, published), sums points, takes the top category plus any within one point, and returns pool products tagged with those categories, ordered by `boostScore`. `isQuizReady` (questions + a non-empty pool) gates every "take the quiz" link. `QuizFlow` shows the top 1–2 in `ProductCard` (results are never templated, so they stay comparable). Dashboard: `?tab=quiz` lists quizzes (`QuizzesPanel`), `?tab=quiz&quiz={id}` edits one (`QuizEditor`), which saves title, slug, status, products and the whole question set in one `PUT /api/brands/[id]/quizzes/[quizId]` (server assigns question ids; the new set is inserted before the old one is deleted). A product's quizzes can also be set from `ProductEditor` (`quizIds` on the product `PATCH`).
 
 **Product pages.** A template (`lib/templates.ts`: Showcase — the default — Classic, Gallery-first, Minimal) is only an ordering of shared blocks in `components/product-blocks/`; never put bespoke markup in a template. Each product also has a colour theme (`lib/accents.ts` ids → `.accent-*` palettes in `app/globals.css`). Content placed on a strong accent colour goes inside `.on-accent`, which re-points the theme tokens so the shared blocks render in the accent's ink without knowing they're on colour.
 
@@ -86,6 +88,6 @@ There is no test suite. Verification is `npm run build` plus checking pages in a
 ## Before calling a change done
 
 1. `npm run build` passes with no warnings.
-2. If product or quiz behaviour changed: sign in, edit in `/dashboard`, save, and confirm it shows on `/quiz` and the product page.
+2. If product or quiz behaviour changed: sign in, edit in `/dashboard`, save, and confirm it shows on `/quiz`, the quiz's own `/quiz/{slug}`, and the product page.
 3. If strings changed: check both `/…` (MN) and `/en/…`.
 4. Check the narrowest layout (280px) in MN. Headless browsers can't size a window below ~500px with `--window-size`; use real device emulation (DevTools protocol) for phone-width checks.

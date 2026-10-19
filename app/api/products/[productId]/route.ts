@@ -29,7 +29,8 @@ const bodySchema = z.object({
   videoUrl: httpUrl.optional(),
   social: z.object({ facebook: httpUrl.optional(), instagram: httpUrl.optional() }).optional(),
   contact: z.object({ phone: z.string().optional(), whatsapp: z.string().optional() }).optional(),
-  includeInQuiz: z.boolean().optional(),
+  /** The quizzes that may suggest this product — replaces its whole set. */
+  quizIds: z.array(z.string().uuid()).optional(),
   categories: z.array(z.string()).optional(),
   pageTemplate: z.enum(["showcase", "classic", "gallery-first", "minimal"]).optional(),
   accent: z.enum(["crimson", "sunset", "sun", "sky", "sage"]).optional(),
@@ -38,18 +39,44 @@ const bodySchema = z.object({
   status: z.enum(["active", "inactive"]).optional(),
 });
 
-async function authorize(productId: string) {
+/** Returns the product's brand id when the caller may manage it, or the
+ *  error response to send back. */
+async function authorize(productId: string): Promise<{ brandId: string } | { denied: NextResponse }> {
   const { data: existing } = await supabaseAdmin
     .from("products")
     .select("brand_id, status")
     .eq("id", productId)
     .maybeSingle();
   if (!existing || existing.status === "deleted") {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
+    return { denied: NextResponse.json({ error: "not_found" }, { status: 404 }) };
   }
   const profile = await getSessionProfile();
   if (!canManageBrand(profile, existing.brand_id)) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    return { denied: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
+  }
+  return { brandId: existing.brand_id };
+}
+
+/** Puts the product in exactly these quizzes (of its own brand; other ids
+ *  are dropped) and takes it out of the rest. */
+async function setQuizMembership(productId: string, brandId: string, quizIds: string[]) {
+  const { data: quizzes, error } = await supabaseAdmin.from("quizzes").select("id").eq("brand_id", brandId);
+  if (error) return error;
+  const own = new Set(quizzes.map((q) => q.id));
+  const wanted = quizIds.filter((id) => own.has(id));
+
+  const unlink = supabaseAdmin.from("quiz_products").delete().eq("product_id", productId);
+  const { error: unlinkError } = await (wanted.length > 0 ? unlink.not("quiz_id", "in", `(${wanted.join(",")})`) : unlink);
+  if (unlinkError) return unlinkError;
+
+  if (wanted.length > 0) {
+    const { error: linkError } = await supabaseAdmin
+      .from("quiz_products")
+      .upsert(
+        wanted.map((quiz_id) => ({ quiz_id, product_id: productId })),
+        { onConflict: "quiz_id,product_id", ignoreDuplicates: true }
+      );
+    if (linkError) return linkError;
   }
   return null;
 }
@@ -58,8 +85,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { productId: string } }
 ) {
-  const denied = await authorize(params.productId);
-  if (denied) return denied;
+  const auth = await authorize(params.productId);
+  if ("denied" in auth) return auth.denied;
 
   const json = await req.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
@@ -92,7 +119,6 @@ export async function PATCH(
     if (patch.contact.whatsapp) contact.whatsapp = patch.contact.whatsapp;
     update.contact = Object.keys(contact).length ? contact : null;
   }
-  if (patch.includeInQuiz !== undefined) update.include_in_quiz = patch.includeInQuiz;
   if (patch.categories !== undefined) update.categories = patch.categories;
   if (patch.pageTemplate !== undefined) update.page_template = patch.pageTemplate;
   if (patch.accent !== undefined) update.accent = patch.accent;
@@ -105,6 +131,11 @@ export async function PATCH(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  if (patch.quizIds !== undefined) {
+    const membershipError = await setQuizMembership(params.productId, auth.brandId, patch.quizIds);
+    if (membershipError) return NextResponse.json({ error: membershipError.message }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -112,8 +143,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { productId: string } }
 ) {
-  const denied = await authorize(params.productId);
-  if (denied) return denied;
+  const auth = await authorize(params.productId);
+  if ("denied" in auth) return auth.denied;
 
   const { error } = await supabaseAdmin
     .from("products")

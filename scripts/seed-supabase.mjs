@@ -1,6 +1,6 @@
 // veramed — first-time seed: the company row plus sample categories,
-// products and quiz questions from supabase/seed.json (the same file the
-// site shows while no database is configured).
+// products, a quiz and its questions from supabase/seed.json (the same file
+// the site shows while no database is configured).
 //
 // Run once after apply-schema: `node scripts/seed-supabase.mjs`.
 //
@@ -78,11 +78,36 @@ try {
     console.log("products: already has content, skipped");
   }
 
-  if ((await count("quiz_questions")) === 0) {
+  if ((await count("quizzes")) === 0) {
+    for (const [i, quiz] of seed.quizzes.entries()) {
+      await client.query(
+        `insert into quizzes (id, brand_id, slug, title_mn, title_en, status, "order")
+         values ($1,$2,$3,$4,$5,'active',$6)`,
+        [quiz.id, c.id, quiz.slug, quiz.title_mn, quiz.title_en, i]
+      );
+      // Only products that exist — the products block above is skipped
+      // once the company has real ones, and their ids won't match these.
+      await client.query(
+        `insert into quiz_products (quiz_id, product_id)
+         select $1, id from products where brand_id = $2 and id = any($3::uuid[])`,
+        [quiz.id, c.id, quiz.product_ids]
+      );
+    }
+    console.log(`quizzes: seeded ${seed.quizzes.length}`);
+  } else {
+    console.log("quizzes: already has content, skipped");
+  }
+
+  // Questions need their seed quiz; if the company already had quizzes of
+  // its own, that quiz was never created and there is nowhere to put them.
+  const { rows: seedQuizzes } = await client.query("select id from quizzes where id = any($1::uuid[])", [
+    seed.quizzes.map((q) => q.id),
+  ]);
+  if ((await count("quiz_questions")) === 0 && seedQuizzes.length === seed.quizzes.length) {
     for (const [qi, q] of seed.questions.entries()) {
       await client.query(
-        `insert into quiz_questions (id, brand_id, text_mn, text_en, "order") values ($1,$2,$3,$4,$5)`,
-        [q.id, c.id, q.text_mn, q.text_en, qi + 1]
+        `insert into quiz_questions (id, brand_id, quiz_id, text_mn, text_en, "order") values ($1,$2,$3,$4,$5,$6)`,
+        [q.id, c.id, q.quiz_id, q.text_mn, q.text_en, qi + 1]
       );
       for (const [ai, a] of q.answers.entries()) {
         await client.query(
@@ -92,9 +117,9 @@ try {
         );
       }
     }
-    console.log(`quiz: seeded ${seed.questions.length} questions`);
+    console.log(`questions: seeded ${seed.questions.length}`);
   } else {
-    console.log("quiz: already has content, skipped");
+    console.log("questions: already has content (or no sample quiz to put them in), skipped");
   }
 
   await client.query("commit");

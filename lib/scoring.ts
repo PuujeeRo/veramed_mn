@@ -6,11 +6,17 @@
 // fetching from here would tie scoring to one data source and make it
 // untestable.
 
-import { Product, QuizAnswerState, QuizQuestion, QuizResult } from "./types";
+import { Product, Quiz, QuizAnswerState, QuizQuestion, QuizResult } from "./types";
 
-/** Published products the manager has opted into the quiz. */
-export function filterQuizEligible(products: Product[]): Product[] {
-  return products.filter((p) => p.status === "active" && p.includeInQuiz);
+/** The products a quiz can recommend: its own, and only published ones. */
+export function quizPool(quiz: Pick<Quiz, "productIds">, products: Product[]): Product[] {
+  const ids = new Set(quiz.productIds);
+  return products.filter((p) => p.status === "active" && ids.has(p.id));
+}
+
+/** Whether a visitor can take this quiz and get a recommendation from it. */
+export function isQuizReady(quiz: Quiz | undefined | null, products: Product[]): quiz is Quiz {
+  return Boolean(quiz && quiz.questions.length > 0 && quizPool(quiz, products).length > 0);
 }
 
 /**
@@ -22,8 +28,8 @@ export function filterQuizEligible(products: Product[]): Product[] {
  *    (plan §2 — boost only orders within an already-relevant match, it
  *    never introduces an irrelevant one)
  *
- * @param questions        that brand's own quiz questions, already resolved
- * @param eligibleProducts that brand's own quiz-eligible products, already resolved
+ * @param questions        the quiz's own questions, already resolved
+ * @param eligibleProducts the quiz's own pool (quizPool), already resolved
  */
 export function scoreQuiz(
   questions: QuizQuestion[],

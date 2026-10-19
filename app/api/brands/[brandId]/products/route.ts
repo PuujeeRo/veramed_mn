@@ -52,7 +52,6 @@ export async function POST(req: NextRequest, { params }: { params: { brandId: st
       price,
       image_url: imageUrl,
       status: "inactive",
-      include_in_quiz: true,
       categories: [],
     })
     .select("*")

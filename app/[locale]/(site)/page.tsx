@@ -1,9 +1,10 @@
 // "/" — the company's home page.
 //
-// Server Component: fetches the company, its products, its quiz questions
-// and categories. The client half lives in components/HomeView.tsx.
+// Server Component: fetches the company, its products, the main quiz (the
+// one /quiz opens) and categories. The client half lives in
+// components/HomeView.tsx.
 
-import { getCompany, getProducts, getQuizQuestions } from "@/lib/data";
+import { getCompany, getProducts, getQuiz } from "@/lib/data";
 import { getCategories } from "@/lib/categories";
 import HomeView from "@/components/HomeView";
 
@@ -12,12 +13,12 @@ import HomeView from "@/components/HomeView";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [brand, products, questions, categories] = await Promise.all([
+  const [brand, products, quiz, categories] = await Promise.all([
     getCompany(),
     getProducts(),
-    getQuizQuestions(),
+    getQuiz(),
     getCategories(),
   ]);
 
-  return <HomeView brand={brand} products={products} questions={questions} categories={categories} />;
+  return <HomeView brand={brand} products={products} quiz={quiz ?? null} categories={categories} />;
 }

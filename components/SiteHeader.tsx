@@ -6,11 +6,12 @@
 //
 // Navigation is a pill group (the design concept's "Products / Contact"
 // pills): the current page is the raised pill. Below `md` the pills
-// collapse into a menu; the logo and the quiz button stay.
+// collapse into a menu; the logo, the quiz button and the manager's
+// sign-in (an icon only, on phones) stay.
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { FiArrowRight, FiMenu, FiX } from "react-icons/fi";
+import { FiArrowRight, FiLogIn, FiMenu, FiX } from "react-icons/fi";
 import { Link, usePathname } from "@/lib/navigation";
 import { useLanguage } from "@/lib/i18n";
 import { onImageError } from "@/lib/media";
@@ -77,6 +78,15 @@ export default function SiteHeader({ brand }: { brand: Brand }) {
           >
             {t("landing.viewQuiz")}
             <FiArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+          <Link
+            href="/login"
+            aria-label={t("login.title")}
+            title={t("login.title")}
+            className="inline-flex h-10 min-w-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-2.5 text-sm font-medium text-fg-muted transition hover:bg-subtle hover:text-fg sm:px-4"
+          >
+            <FiLogIn size={16} className="shrink-0" />
+            <span className="hidden sm:inline">{t("login.title")}</span>
           </Link>
           <button
             type="button"

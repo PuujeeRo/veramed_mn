@@ -1,5 +1,5 @@
-// veramed — the company, its products and its quiz questions, read from
-// Supabase Postgres through the anon client (public-read RLS).
+// veramed — the company, its products and its quizzes, read from Supabase
+// Postgres through the anon client (public-read RLS).
 //
 // While Supabase isn't configured (lib/company.ts's isSupabaseConfigured()),
 // every read here returns supabase/seed.json's sample content instead, so
@@ -9,7 +9,7 @@
 
 import { supabase } from "./supabase";
 import { COMPANY_ID, isSupabaseConfigured } from "./company";
-import { Brand, CompanyContact, PageTemplate, Product, QuizQuestion } from "./types";
+import { Brand, CompanyContact, PageTemplate, Product, Quiz, QuizQuestion } from "./types";
 import type { ProductAccent } from "./accents";
 import seed from "@/supabase/seed.json";
 
@@ -41,7 +41,6 @@ export interface ProductRow {
   page_template: PageTemplate | null;
   accent: ProductAccent | null;
   categories: string[];
-  include_in_quiz: boolean;
   buy_now_url: string | null;
   boost_score: number;
   status: "active" | "inactive" | "deleted";
@@ -78,7 +77,6 @@ export function toProduct(row: ProductRow): Product {
     pageTemplate: row.page_template ?? undefined,
     accent: row.accent ?? undefined,
     categories: row.categories,
-    includeInQuiz: row.include_in_quiz,
     buyNowUrl: row.buy_now_url ?? undefined,
     boostScore: row.boost_score,
     status: row.status,
@@ -106,14 +104,27 @@ function seedProducts(): Product[] {
   );
 }
 
-function seedQuestions(): QuizQuestion[] {
-  return seed.questions.map((q, qi) => ({
-    id: q.id,
+function seedQuizzes(): Quiz[] {
+  return seed.quizzes.map((quiz, i) => ({
+    id: quiz.id,
     brandId: COMPANY_ID,
-    order: qi + 1,
-    text_mn: q.text_mn,
-    text_en: q.text_en,
-    answers: q.answers.map((a, ai) => ({ id: `${q.id}-a${ai + 1}`, ...a })),
+    slug: quiz.slug,
+    title_mn: quiz.title_mn,
+    title_en: quiz.title_en,
+    status: "active",
+    order: i,
+    productIds: quiz.product_ids,
+    questions: seed.questions
+      .filter((q) => q.quiz_id === quiz.id)
+      .map((q, qi) => ({
+        id: q.id,
+        brandId: COMPANY_ID,
+        quizId: quiz.id,
+        order: qi + 1,
+        text_mn: q.text_mn,
+        text_en: q.text_en,
+        answers: q.answers.map((a, ai) => ({ id: `${q.id}-a${ai + 1}`, ...a })),
+      })),
   }));
 }
 
@@ -201,26 +212,30 @@ interface QuizAnswerRow {
 interface QuizQuestionRow {
   id: string;
   brand_id: string;
+  quiz_id: string;
   text_mn: string;
   text_en: string | null;
   order: number;
   quiz_answers: QuizAnswerRow[];
 }
 
-/** Public read — a visitor takes the quiz with no auth. Answers come back
- *  nested via the FK join; both levels are sorted by "order" here so
- *  callers never need to re-sort. */
-export async function getQuizQuestions(): Promise<QuizQuestion[]> {
-  if (!isSupabaseConfigured()) return seedQuestions();
-  const { data, error } = await supabase
-    .from("quiz_questions")
-    .select("id, brand_id, text_mn, text_en, order, quiz_answers(id, text_mn, text_en, category, points, order)")
-    .eq("brand_id", COMPANY_ID)
-    .order("order");
-  if (error) throw error;
-  return (data as unknown as QuizQuestionRow[]).map((row) => ({
+interface QuizRow {
+  id: string;
+  brand_id: string;
+  slug: string;
+  title_mn: string;
+  title_en: string | null;
+  status: "active" | "inactive";
+  order: number;
+  quiz_products: { product_id: string }[];
+  quiz_questions: QuizQuestionRow[];
+}
+
+function toQuizQuestion(row: QuizQuestionRow): QuizQuestion {
+  return {
     id: row.id,
     brandId: row.brand_id,
+    quizId: row.quiz_id,
     order: row.order,
     text_mn: row.text_mn,
     text_en: row.text_en ?? "",
@@ -233,5 +248,54 @@ export async function getQuizQuestions(): Promise<QuizQuestion[]> {
         category: a.category,
         points: a.points,
       })),
-  }));
+  };
+}
+
+function toQuiz(row: QuizRow): Quiz {
+  return {
+    id: row.id,
+    brandId: row.brand_id,
+    slug: row.slug,
+    title_mn: row.title_mn,
+    title_en: row.title_en ?? undefined,
+    status: row.status,
+    order: row.order,
+    productIds: row.quiz_products.map((p) => p.product_id),
+    questions: [...row.quiz_questions].sort((a, b) => a.order - b.order).map(toQuizQuestion),
+  };
+}
+
+/** Columns for one quiz with its products and questions nested via the FK
+ *  joins. Shared with the quiz routes so a save returns what a read does. */
+export const QUIZ_SELECT =
+  "id, brand_id, slug, title_mn, title_en, status, order, quiz_products(product_id), " +
+  "quiz_questions(id, brand_id, quiz_id, text_mn, text_en, order, quiz_answers(id, text_mn, text_en, category, points, order))";
+
+export function rowToQuiz(row: unknown): Quiz {
+  return toQuiz(row as QuizRow);
+}
+
+/** Every quiz, hidden ones included — for the dashboard. Main first. */
+export async function getQuizzes(): Promise<Quiz[]> {
+  if (!isSupabaseConfigured()) return seedQuizzes();
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select(QUIZ_SELECT)
+    .eq("brand_id", COMPANY_ID)
+    .order("order")
+    .order("created_at");
+  if (error) throw error;
+  return (data as unknown as QuizRow[]).map(toQuiz);
+}
+
+/** What visitors can open: published quizzes only, main first. */
+export async function getPublishedQuizzes(): Promise<Quiz[]> {
+  return (await getQuizzes()).filter((q) => q.status === "active");
+}
+
+/** One published quiz by its slug, or the main one when no slug is given.
+ *  Undefined when there is no such quiz (or none is published). */
+export async function getQuiz(slug?: string): Promise<Quiz | undefined> {
+  const published = await getPublishedQuizzes();
+  return slug === undefined ? published[0] : published.find((q) => q.slug === slug);
 }

@@ -23,8 +23,8 @@ import {
 } from "react-icons/fi";
 import { Link } from "@/lib/navigation";
 import { localized, useLanguage } from "@/lib/i18n";
-import { filterQuizEligible } from "@/lib/scoring";
-import { Brand, Product, QuizQuestion } from "@/lib/types";
+import { isQuizReady, quizPool } from "@/lib/scoring";
+import { Brand, Product, Quiz } from "@/lib/types";
 import PageHeader from "./ui/PageHeader";
 import Section from "./ui/Section";
 import ShareLinkRow from "./ShareLinkRow";
@@ -33,7 +33,7 @@ import { ShellUser } from "./DashboardShell";
 interface OverviewPanelProps {
   brand: Brand;
   products: Product[];
-  questions: QuizQuestion[];
+  quizzes: Quiz[];
   user: ShellUser | null;
 }
 
@@ -47,21 +47,32 @@ interface Issue {
   action: string;
 }
 
-export default function OverviewPanel({ brand, products, questions, user }: OverviewPanelProps) {
+export default function OverviewPanel({ brand, products, quizzes, user }: OverviewPanelProps) {
   const { locale, t } = useLanguage();
 
   const published = products.filter((p) => p.status === "active");
   const hidden = products.filter((p) => p.status === "inactive");
-  const recommendable = filterQuizEligible(products).filter((p) => p.categories.length > 0);
-  const inQuizNoCategory = published.filter((p) => p.includeInQuiz && p.categories.length === 0);
   const noOrderLink = published.filter((p) => !p.buyNowUrl);
 
-  // Quiz answers that add points to a category no published, quiz-enabled
-  // product carries: a visitor who picks them gets "no match".
-  const coveredCategories = new Set(recommendable.flatMap((p) => p.categories));
-  const deadAnswers = questions.flatMap((q) =>
-    q.answers.filter((a) => a.points > 0 && !coveredCategories.has(a.category)).map((a) => ({ q, a }))
+  const publishedQuizzes = quizzes.filter((q) => q.status === "active");
+  const liveQuizzes = publishedQuizzes.filter((q) => isQuizReady(q, products));
+  // Published products a live quiz can actually land on.
+  const recommendable = published.filter(
+    (p) => p.categories.length > 0 && liveQuizzes.some((q) => q.productIds.includes(p.id))
   );
+  const inQuizNoCategory = published.filter(
+    (p) => p.categories.length === 0 && quizzes.some((q) => q.productIds.includes(p.id))
+  );
+
+  // Answers in a published quiz that add points to a category none of that
+  // quiz's own published products carries: a visitor who picks them gets
+  // "no match".
+  const deadAnswers = publishedQuizzes.flatMap((quiz) => {
+    const covered = new Set(quizPool(quiz, products).flatMap((p) => p.categories));
+    return quiz.questions.flatMap((q) =>
+      q.answers.filter((a) => a.points > 0 && !covered.has(a.category)).map((a) => ({ quiz, a }))
+    );
+  });
 
   const c = brand.contact ?? {};
   const hasContact = Boolean(c.phone || c.email || c.facebook || c.instagram);
@@ -73,7 +84,7 @@ export default function OverviewPanel({ brand, products, questions, user }: Over
       .join(", ") + (list.length > 3 ? ` +${list.length - 3}` : "");
 
   const issues: Issue[] = [];
-  if (questions.length === 0) {
+  if (liveQuizzes.length === 0) {
     issues.push({ key: "no-quiz", icon: FiHelpCircle, tone: "warning", title: t("overview.noQuizTitle"), body: t("overview.noQuizBody"), href: "/dashboard?tab=quiz", action: t("overview.openQuiz") });
   }
   if (inQuizNoCategory.length > 0) {
@@ -89,7 +100,7 @@ export default function OverviewPanel({ brand, products, questions, user }: Over
         .slice(0, 3)
         .map(({ a }) => `“${localized(locale, a.text_mn, a.text_en)}”`)
         .join(", "),
-      href: "/dashboard?tab=quiz",
+      href: `/dashboard?tab=quiz&quiz=${deadAnswers[0].quiz.id}`,
       action: t("overview.openQuiz"),
     });
   }
@@ -124,7 +135,7 @@ export default function OverviewPanel({ brand, products, questions, user }: Over
         <Kpi label={t("overview.kpiPublished")} value={published.length} sub={t("overview.kpiOf", { n: products.length })} href="/dashboard?tab=products&status=active" />
         <Kpi label={t("overview.kpiHidden")} value={hidden.length} sub={t("overview.kpiHiddenSub")} href="/dashboard?tab=products&status=inactive" />
         <Kpi label={t("overview.kpiRecommendable")} value={recommendable.length} sub={t("overview.kpiRecommendableSub")} href="/dashboard?tab=products" />
-        <Kpi label={t("overview.kpiQuestions")} value={questions.length} sub={t("overview.kpiQuestionsSub")} href="/dashboard?tab=quiz" />
+        <Kpi label={t("overview.kpiQuizzes")} value={publishedQuizzes.length} sub={t("overview.kpiQuizzesSub", { n: quizzes.length })} href="/dashboard?tab=quiz" />
       </dl>
 
       <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">

@@ -10,8 +10,8 @@ import { Link } from "@/lib/navigation";
 import { FiArrowLeft, FiArrowRight, FiCheck, FiChevronLeft, FiRefreshCw } from "react-icons/fi";
 import { useLanguage, localized } from "@/lib/i18n";
 import { onImageError } from "@/lib/media";
-import { Brand, Category, Product, QuizAnswerState, QuizQuestion } from "@/lib/types";
-import { filterQuizEligible, scoreQuiz } from "@/lib/scoring";
+import { Brand, Category, Product, Quiz, QuizAnswerState, QuizQuestion } from "@/lib/types";
+import { isQuizReady, quizPool, scoreQuiz } from "@/lib/scoring";
 import { recordQuizSessionStart, recordQuizComplete } from "@/lib/stats";
 import ProgressBar from "./ProgressBar";
 import ProductCard from "./ProductCard";
@@ -20,8 +20,10 @@ type Stage = "intro" | "question" | "analyzing" | "result";
 
 interface QuizFlowProps {
   brand: Brand;
-  questions: QuizQuestion[];
-  /** All active products; filtered to quiz-eligible here. */
+  /** The quiz being taken; null when there is none to show (/quiz with no
+   *  published quiz). */
+  quiz: Quiz | null;
+  /** All active products; narrowed to the quiz's own pool here. */
   products: Product[];
   /** Resolves the result page's category label (see categoryLabel() below). */
   categories: Category[];
@@ -29,10 +31,17 @@ interface QuizFlowProps {
 
 export default function QuizFlow({
   brand,
-  questions,
+  quiz,
   products,
   categories,
 }: QuizFlowProps) {
+  const questions = quiz?.questions ?? [];
+  // The products this quiz can actually recommend — shown on the intro so
+  // a visitor sees what they're choosing between before they start.
+  const pool = quiz ? quizPool(quiz, products) : [];
+  // No questions, or nothing to recommend: every visitor would end on
+  // "no match", so the quiz reads as not set up yet instead.
+  const ready = isQuizReady(quiz, products);
   const { locale, t } = useLanguage();
   const [stage, setStage] = useState<Stage>("intro");
   const [step, setStep] = useState(0);
@@ -42,22 +51,21 @@ export default function QuizFlow({
   // the quiz itself (see lib/stats.ts).
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // `brand`, `products`, and `questions` all arrive already-resolved
-  // (fetched server-side in app/[locale]/(site)/quiz/page.tsx).
+  // `brand`, `quiz` and `products` all arrive already-resolved (fetched
+  // server-side in app/[locale]/(site)/quiz/).
   //
   // A quiz "session" (`quiz_sessions`) starts here — the
   // moment a visitor opens a properly set-up quiz, not just when they click
   // Start on the intro screen. Guarded with a ref: Strict Mode double-invokes
   // effects in dev, which would otherwise double-count every visit locally.
   const sessionStarted = useRef(false);
+  const quizId = quiz?.id;
   useEffect(() => {
-    if (questions.length > 0 && !sessionStarted.current) {
+    if (ready && quizId && !sessionStarted.current) {
       sessionStarted.current = true;
-      recordQuizSessionStart(brand.id).then(setSessionId);
+      recordQuizSessionStart(brand.id, quizId).then(setSessionId);
     }
-  }, [brand.id, questions.length]);
-
-  const notSetUp = questions.length === 0;
+  }, [brand.id, quizId, ready]);
 
   const currentQuestion = questions[step];
 
@@ -106,10 +114,10 @@ export default function QuizFlow({
     // result screen's completion effect can't fire against the old id
     // while this one is still resolving.
     setSessionId(null);
-    recordQuizSessionStart(brand.id).then(setSessionId);
+    if (quizId) recordQuizSessionStart(brand.id, quizId).then(setSessionId);
   }
 
-  if (notSetUp) {
+  if (!ready) {
     return (
       <div className="mx-auto flex min-h-[60dvh] w-full max-w-2xl flex-col px-4 py-6 sm:px-6">
         <div className="my-auto py-10">
@@ -126,9 +134,6 @@ export default function QuizFlow({
     );
   }
 
-  // The products this quiz can actually recommend — shown on the intro so
-  // a visitor sees what they're choosing between before they start.
-  const pool = filterQuizEligible(products);
   const picked = answers[step]?.answerId;
 
   // Outer wrapper widens for the result (and the skeleton standing in for
@@ -168,7 +173,7 @@ export default function QuizFlow({
           )}
 
           <h1 className="mt-6 text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-fg sm:text-4xl">
-            {localized(locale, brand.quizIntro_mn, brand.quizIntro_en)}
+            {localized(locale, quiz.title_mn, quiz.title_en)}
           </h1>
           <p className="mt-4 max-w-[52ch] leading-relaxed text-fg-muted sm:text-lg">
             {t("brand.quizCardBody", { count: questions.length })}
@@ -271,7 +276,7 @@ export default function QuizFlow({
         <QuizResultView
           brand={brand}
           questions={questions}
-          products={products}
+          pool={pool}
           categories={categories}
           answers={answers}
           sessionId={sessionId}
@@ -285,7 +290,7 @@ export default function QuizFlow({
 function QuizResultView({
   brand,
   questions,
-  products,
+  pool,
   categories,
   answers,
   sessionId,
@@ -293,14 +298,15 @@ function QuizResultView({
 }: {
   brand: Brand;
   questions: QuizQuestion[];
-  products: Product[];
+  /** The quiz's own recommendable products (quizPool). */
+  pool: Product[];
   categories: Category[];
   answers: QuizAnswerState[];
   sessionId: string | null;
   onRetake: () => void;
 }) {
   const { locale, t } = useLanguage();
-  const results = scoreQuiz(questions, filterQuizEligible(products), answers);
+  const results = scoreQuiz(questions, pool, answers);
 
   // Session complete (`quiz_sessions.completed_at`) plus one
   // `quiz_results` row per product actually shown — matches the top 1–2

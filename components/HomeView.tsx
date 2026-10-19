@@ -1,8 +1,8 @@
 "use client";
 
 // Client half of the home page. The Server Component in
-// app/[locale]/(site)/page.tsx fetches the company, products, quiz
-// questions and categories; this renders them.
+// app/[locale]/(site)/page.tsx fetches the company, products, the main
+// quiz and categories; this renders them.
 //
 // The design concept's language: one big colour block for the hero (the
 // brand's crimson) with the products fanned across it, chips with icons
@@ -15,16 +15,17 @@ import Image from "next/image";
 import { FiArrowRight, FiCheck, FiClock, FiMessageCircle, FiUserX } from "react-icons/fi";
 import { Link } from "@/lib/navigation";
 import { localized, useLanguage } from "@/lib/i18n";
-import { filterQuizEligible } from "@/lib/scoring";
+import { isQuizReady } from "@/lib/scoring";
 import { onImageError } from "@/lib/media";
 import { categoryIcon } from "@/lib/categoryIcons";
-import { Brand, Category, Product, QuizQuestion } from "@/lib/types";
+import { Brand, Category, Product, Quiz } from "@/lib/types";
 import ProductTile from "@/components/ProductTile";
 
 interface HomeViewProps {
   brand: Brand;
   products: Product[];
-  questions: QuizQuestion[];
+  /** The main quiz — the one /quiz opens — or null when none is published. */
+  quiz: Quiz | null;
   categories: Category[];
 }
 
@@ -52,11 +53,12 @@ function Leaves() {
   );
 }
 
-export default function HomeView({ brand, products, questions, categories }: HomeViewProps) {
+export default function HomeView({ brand, products, quiz, categories }: HomeViewProps) {
   const { locale, t } = useLanguage();
 
   // A quiz needs both questions and something to recommend.
-  const hasQuiz = questions.length > 0 && filterQuizEligible(products).length > 0;
+  const hasQuiz = isQuizReady(quiz, products);
+  const questions = quiz?.questions ?? [];
   const firstQuestion = questions[0];
   const featured = products.slice(0, FEATURED_LIMIT);
   const fan = products.slice(0, 3);

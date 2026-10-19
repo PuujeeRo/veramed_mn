@@ -9,16 +9,18 @@ import { useSearchParams } from "next/navigation";
 import { FiPlus } from "react-icons/fi";
 import { useLanguage } from "@/lib/i18n";
 import { useRouter } from "@/lib/navigation";
-import { Product } from "@/lib/types";
+import { Product, Quiz } from "@/lib/types";
 import PageHeader from "./ui/PageHeader";
 import ProductsTable from "./ProductsTable";
 import ProductCreateForm from "./ProductCreateForm";
 
 export default function ProductsPanel({
   products,
+  quizzes,
   onCreated,
 }: {
   products: Product[];
+  quizzes: Quiz[];
   onCreated: (product: Product) => void;
 }) {
   const { t } = useLanguage();
@@ -38,7 +40,7 @@ export default function ProductsPanel({
         }
       />
 
-      <ProductsTable products={products} onAdd={() => setCreating(true)} />
+      <ProductsTable products={products} quizzes={quizzes} onAdd={() => setCreating(true)} />
 
       <ProductCreateForm
         open={creating}

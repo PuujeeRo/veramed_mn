@@ -29,7 +29,7 @@ import {
 } from "react-icons/fi";
 import { MdQrCode2 } from "react-icons/md";
 import { Link, useRouter } from "@/lib/navigation";
-import { Category, Product } from "@/lib/types";
+import { Category, Product, Quiz } from "@/lib/types";
 import { localized, useLanguage } from "@/lib/i18n";
 import { getCategories } from "@/lib/categories";
 import { onImageError } from "@/lib/media";
@@ -47,10 +47,12 @@ const MAX_CHIPS = 2;
 
 interface ProductsTableProps {
   products: Product[];
+  /** For the Quiz column: which quizzes each product is in. */
+  quizzes: Quiz[];
   onAdd: () => void;
 }
 
-export default function ProductsTable({ products, onAdd }: ProductsTableProps) {
+export default function ProductsTable({ products, quizzes, onAdd }: ProductsTableProps) {
   const { locale, t } = useLanguage();
   const router = useRouter();
   const origin = useOrigin();
@@ -169,10 +171,14 @@ export default function ProductsTable({ products, onAdd }: ProductsTableProps) {
       </span>
     );
 
+  // In at least one quiz, with a category it can be matched on.
+  const quizCount = (p: Product) => quizzes.filter((q) => q.productIds.includes(p.id)).length;
+  const inQuiz = (p: Product) => quizCount(p) > 0 && p.categories.length > 0;
+
   const quizMark = (p: Product) =>
-    p.includeInQuiz && p.categories.length > 0 ? (
+    inQuiz(p) ? (
       <span
-        title={t("dash.inQuiz")}
+        title={t("dash.inQuizzes", { n: quizCount(p) })}
         className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
       >
         <FiCheck size={14} aria-label={t("dash.inQuiz")} />
@@ -357,7 +363,7 @@ export default function ProductsTable({ products, onAdd }: ProductsTableProps) {
                   <p className="mt-0.5 text-sm font-medium tabular-nums text-fg-muted">₮{p.price.toLocaleString("en-US")}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {statusPill(p)}
-                    {p.includeInQuiz && p.categories.length > 0 && (
+                    {inQuiz(p) && (
                       <StatusPill tone="brand" dot={false}>
                         {t("dash.inQuiz")}
                       </StatusPill>

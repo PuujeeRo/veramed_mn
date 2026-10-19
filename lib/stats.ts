@@ -44,9 +44,13 @@ export function recordBuyNowClick(productId: string) {
  *  id, needed later to mark the same row completed. Returns null on
  *  failure (network hiccup, etc.) — callers treat that as "nothing to
  *  complete later," never as a reason to block the quiz itself. */
-export async function recordQuizSessionStart(brandId: string): Promise<string | null> {
+export async function recordQuizSessionStart(brandId: string, quizId: string): Promise<string | null> {
   try {
-    const res = await fetch(`/api/brands/${brandId}/quiz-sessions`, { method: "POST" });
+    const res = await fetch(`/api/brands/${brandId}/quiz-sessions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quizId }),
+    });
     if (!res.ok) return null;
     const { sessionId } = (await res.json()) as { sessionId: string };
     return sessionId;

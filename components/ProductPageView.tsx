@@ -23,14 +23,14 @@ interface ProductPageViewProps {
   product: Product;
   /** The other products, for "more products". */
   others?: Product[];
-  /** Whether the quiz is set up at all (questions exist). */
-  hasQuiz: boolean;
+  /** A published quiz that can recommend this product, or null for none. */
+  quizHref: string | null;
 }
 
 // How many other products to show before "see all".
 const MORE_LIMIT = 4;
 
-export default function ProductPageView({ product, others = [], hasQuiz }: ProductPageViewProps) {
+export default function ProductPageView({ product, others = [], quizHref }: ProductPageViewProps) {
   const { locale, t } = useLanguage();
 
   // View tracking — `?src=qr` (the QR generator's own link format) marks a
@@ -68,7 +68,7 @@ export default function ProductPageView({ product, others = [], hasQuiz }: Produ
 
   const TemplateComponent = getTemplateComponent(resolveTemplate(product));
 
-  const inQuiz = hasQuiz && product.includeInQuiz;
+  const inQuiz = quizHref !== null;
   const more = others.slice(0, MORE_LIMIT);
 
   return (
@@ -96,9 +96,9 @@ export default function ProductPageView({ product, others = [], hasQuiz }: Produ
 
       {/* Where to go next. The quiz only when this product is actually in
           it; the other products whenever there are any. */}
-      {inQuiz && (
+      {quizHref && (
         <Link
-          href="/quiz"
+          href={quizHref}
           className="group mt-12 flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition hover:border-brand-500 sm:p-5"
         >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white">

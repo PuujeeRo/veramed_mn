@@ -1,19 +1,20 @@
-// "/quiz" — the product-recommendation quiz. Visitors are anonymous; no
-// account, nothing asked of them but the answers.
+// "/quiz" — the main quiz: the first published one (see lib/data.ts
+// getQuiz). Every quiz also has its own link, /quiz/{slug}. Visitors are
+// anonymous; no account, nothing asked of them but the answers.
 
-import { getCompany, getProducts, getQuizQuestions } from "@/lib/data";
+import { getCompany, getProducts, getQuiz } from "@/lib/data";
 import { getCategories } from "@/lib/categories";
 import QuizFlow from "@/components/QuizFlow";
 
 export const dynamic = "force-dynamic";
 
 export default async function QuizPage() {
-  const [brand, questions, products, categories] = await Promise.all([
+  const [brand, quiz, products, categories] = await Promise.all([
     getCompany(),
-    getQuizQuestions(),
+    getQuiz(),
     getProducts(),
     getCategories(),
   ]);
 
-  return <QuizFlow brand={brand} questions={questions} products={products} categories={categories} />;
+  return <QuizFlow brand={brand} quiz={quiz ?? null} products={products} categories={categories} />;
 }

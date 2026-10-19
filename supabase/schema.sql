@@ -1,6 +1,6 @@
 -- veramed — full schema. One company (see lib/company.ts), its products,
--- its quiz, and the anonymous traffic/funnel events behind the dashboard's
--- Stats tab.
+-- its quizzes, and the anonymous traffic/funnel events behind the
+-- dashboard's Stats tab.
 --
 -- Run with `node scripts/apply-schema.mjs`. Every statement is idempotent
 -- (create ... if not exists / drop policy if exists), so re-running it
@@ -23,7 +23,7 @@ create table if not exists brands (
   slug text unique not null,
   name text not null,
   logo_url text not null,
-  quiz_intro_mn text not null,   -- tagline: home page headline + quiz intro
+  quiz_intro_mn text not null,   -- tagline: home page headline (each quiz has its own title)
   quiz_intro_en text,
   about_mn text,
   about_en text,
@@ -178,15 +178,46 @@ create policy "manager writes own categories" on categories for all
     or exists (select 1 from brand_members where user_id = auth.uid() and brand_id = categories.brand_id)
   );
 
+-- The company can run several quizzes. Each has its own questions and its
+-- own list of products it recommends from (quiz_products — a product can
+-- sit in several). Visitors open one at /quiz/{slug}; /quiz itself shows
+-- the main one: the first published quiz by "order".
+create table if not exists quizzes (
+  id uuid primary key default gen_random_uuid(),
+  brand_id uuid not null references brands(id) on delete cascade,
+  slug text not null,
+  title_mn text not null,        -- the headline on the quiz's intro screen
+  title_en text,
+  -- New quizzes start hidden, like new products.
+  status text not null default 'inactive' check (status in ('active','inactive')),
+  "order" int not null default 0,
+  created_at timestamptz not null default now(),
+  unique (brand_id, slug)
+);
+create index if not exists quizzes_brand_id_idx on quizzes(brand_id);
+
+create table if not exists quiz_products (
+  quiz_id uuid not null references quizzes(id) on delete cascade,
+  product_id uuid not null references products(id) on delete cascade,
+  primary key (quiz_id, product_id)
+);
+create index if not exists quiz_products_product_id_idx on quiz_products(product_id);
+
 create table if not exists quiz_questions (
   id uuid primary key default gen_random_uuid(),
   brand_id uuid not null references brands(id) on delete cascade,
+  quiz_id uuid references quizzes(id) on delete cascade,
   text_mn text not null,
   text_en text,
   "order" int not null default 0,
   created_at timestamptz not null default now()
 );
 create index if not exists quiz_questions_brand_id_idx on quiz_questions(brand_id);
+-- Nullable only for questions saved before quizzes existed;
+-- scripts/migrate-quizzes.mjs moves those into a quiz. Every read filters
+-- on quiz_id, so a question without one is never shown.
+alter table quiz_questions add column if not exists quiz_id uuid references quizzes(id) on delete cascade;
+create index if not exists quiz_questions_quiz_id_idx on quiz_questions(quiz_id);
 
 create table if not exists quiz_answers (
   id uuid primary key default gen_random_uuid(),
@@ -199,10 +230,45 @@ create table if not exists quiz_answers (
 );
 create index if not exists quiz_answers_question_id_idx on quiz_answers(question_id);
 
+alter table quizzes enable row level security;
+alter table quiz_products enable row level security;
 alter table quiz_questions enable row level security;
 alter table quiz_answers enable row level security;
 
--- Public read — a visitor takes the quiz with no account.
+-- Public read — a visitor takes the quiz with no account. Hidden quizzes
+-- are readable too (as hidden products are); visitor pages filter them out.
+drop policy if exists "public read quizzes" on quizzes;
+create policy "public read quizzes" on quizzes for select using (true);
+drop policy if exists "public read quiz_products" on quiz_products;
+create policy "public read quiz_products" on quiz_products for select using (true);
+
+drop policy if exists "manager writes own quizzes" on quizzes;
+create policy "manager writes own quizzes" on quizzes for all
+  using (
+    exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+    or exists (select 1 from brand_members where user_id = auth.uid() and brand_id = quizzes.brand_id)
+  )
+  with check (
+    exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+    or exists (select 1 from brand_members where user_id = auth.uid() and brand_id = quizzes.brand_id)
+  );
+
+drop policy if exists "manager writes own quiz_products" on quiz_products;
+create policy "manager writes own quiz_products" on quiz_products for all
+  using (exists (
+    select 1 from quizzes qz
+    where qz.id = quiz_products.quiz_id and (
+      exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+      or exists (select 1 from brand_members where user_id = auth.uid() and brand_id = qz.brand_id)
+    )
+  ))
+  with check (exists (
+    select 1 from quizzes qz
+    where qz.id = quiz_products.quiz_id and (
+      exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+      or exists (select 1 from brand_members where user_id = auth.uid() and brand_id = qz.brand_id)
+    )
+  ));
 drop policy if exists "public read quiz_questions" on quiz_questions;
 create policy "public read quiz_questions" on quiz_questions for select using (true);
 drop policy if exists "public read quiz_answers" on quiz_answers;
@@ -246,6 +312,9 @@ create table if not exists quiz_sessions (
   completed_at timestamptz
 );
 create index if not exists quiz_sessions_brand_id_idx on quiz_sessions(brand_id);
+-- Which quiz the visitor opened. Set null if that quiz is later deleted, so
+-- the session still counts toward the company's totals.
+alter table quiz_sessions add column if not exists quiz_id uuid references quizzes(id) on delete set null;
 
 create table if not exists quiz_results (
   id uuid primary key default gen_random_uuid(),
@@ -349,3 +418,7 @@ as $$
   left join c on c.product_id = i.product_id
   left join r on r.product_id = i.product_id;
 $$;
+
+-- Tell PostgREST (Supabase's REST layer) to pick up new tables and columns
+-- right away, so the site doesn't briefly report a table as missing.
+notify pgrst, 'reload schema';
