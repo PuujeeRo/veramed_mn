@@ -30,6 +30,17 @@ create table if not exists brands (
   contact jsonb,                 -- { phone, email, address, facebook, instagram }
   created_at timestamptz not null default now()
 );
+-- `create table if not exists` skips a table that already exists, so a
+-- database created from an older version of this schema never gets the
+-- columns added since. Keep these in step with the table above.
+alter table brands add column if not exists slug text;
+alter table brands add column if not exists name text;
+alter table brands add column if not exists logo_url text;
+alter table brands add column if not exists quiz_intro_mn text;
+alter table brands add column if not exists quiz_intro_en text;
+alter table brands add column if not exists about_mn text;
+alter table brands add column if not exists about_en text;
+alter table brands add column if not exists contact jsonb;
 
 create table if not exists products (
   id uuid primary key default gen_random_uuid(),
@@ -63,6 +74,14 @@ create index if not exists products_brand_id_idx on products(brand_id);
 -- existing database instead of skipping it (create table if not exists
 -- never alters a table that's already there).
 alter table products add column if not exists accent text;
+-- `page_tier` is from the platform this was cloned from; nothing here uses
+-- it, but an older database still requires it on every insert.
+do $$ begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'products' and column_name = 'page_tier') then
+    alter table products alter column page_tier drop not null;
+  end if;
+end $$;
 alter table products drop constraint if exists products_page_template_check;
 alter table products add constraint products_page_template_check
   check (page_template in ('showcase','classic','gallery-first','minimal'));
