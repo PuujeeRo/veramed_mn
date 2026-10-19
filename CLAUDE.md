@@ -21,13 +21,18 @@ node scripts/seed-auth.mjs         # create the manager account from SEED_MANAGE
 node scripts/gen-placeholders.mjs  # regenerate the sample product SVGs in public/products
 ```
 
+**Current dev database is shared with urgoods.** The local `.env.local` points at the urgoods *test* Supabase project (`D:\Projects\ur_goods_com`); only the UI differs. `NEXT_PUBLIC_COMPANY_ID` is set to urgoods' demo "Brand A" row, and sign-in uses the urgoods Brand A manager account. While that is the case:
+- **Do not run `apply-schema.mjs`, `seed-supabase.mjs` or `seed-auth.mjs`** — urgoods owns that schema, its RLS policies and its seed data.
+- The shared DB lacks two veramed-only columns, `brands.contact` and `products.accent`. Reads work; saving site content or a product edit fails until they are added (nullable, additive — harmless to urgoods).
+- Moving to veramed's own Supabase project later = new keys in `.env.local`, drop `NEXT_PUBLIC_COMPANY_ID`, then run the three scripts above.
+
 There is no test suite. Verification is `npm run build` plus checking pages in a browser.
 
 `next build` and `next dev` share `.next/` — never run a build while a dev server is running in the same folder; it breaks the dev server until restarted.
 
 ## Architecture
 
-**One company.** The DB keeps a multi-tenant shape (`brands` table, `brand_id` on everything, the `Brand` type) but holds exactly one row, pinned to `COMPANY_ID` in `lib/company.ts` (must match `supabase/seed.json`). API routes keep the `/api/brands/[brandId]/…` shape and are called with `COMPANY_ID`. Nothing looks a company up by slug.
+**One company.** The DB keeps a multi-tenant shape (`brands` table, `brand_id` on everything, the `Brand` type) but the site only ever reads one row, `COMPANY_ID` in `lib/company.ts` — `NEXT_PUBLIC_COMPANY_ID` if set, otherwise the default that matches `supabase/seed.json`. API routes keep the `/api/brands/[brandId]/…` shape and are called with `COMPANY_ID`. Nothing looks a company up by slug.
 
 **Request flow.** `middleware.ts` does three things: refreshes the Supabase session cookie, gates `/dashboard*` and `/account*` (signed-in user with a `profiles` row, plus a `brand_members` row for the company unless `role = admin`), and runs next-intl locale routing for everything except `/api/**`. Every page lives under `app/[locale]/`; each is a thin Server Component that fetches data (`force-dynamic`, always the latest save) and renders a client `*View` component. `app/[locale]/(site)/` holds the visitor pages and shares `SiteHeader`/`SiteFooter` via its layout; `dashboard/` and `account/` render inside `DashboardShell` instead.
 

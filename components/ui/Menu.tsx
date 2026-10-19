@@ -22,10 +22,19 @@ interface MenuProps {
   label: string;
   items: MenuItem[];
   align?: "left" | "right";
+  /** Opens below the trigger (default) or above it, for triggers at the bottom of the screen. */
+  side?: "down" | "up";
   triggerClassName?: string;
 }
 
-export default function Menu({ trigger, label, items, align = "right", triggerClassName = "icon-btn" }: MenuProps) {
+export default function Menu({
+  trigger,
+  label,
+  items,
+  align = "right",
+  side = "down",
+  triggerClassName = "icon-btn",
+}: MenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -81,9 +90,9 @@ export default function Menu({ trigger, label, items, align = "right", triggerCl
           id={menuId}
           role="menu"
           onKeyDown={onListKey}
-          className={`absolute top-full z-menu mt-1.5 min-w-[12rem] origin-top rounded-lg border border-line bg-surface p-1 shadow-pop motion-safe:animate-pop-in ${
-            align === "right" ? "right-0" : "left-0"
-          }`}
+          className={`absolute z-menu min-w-[12rem] rounded-lg border border-line bg-surface p-1 shadow-pop motion-safe:animate-pop-in ${
+            side === "up" ? "bottom-full mb-1.5 origin-bottom" : "top-full mt-1.5 origin-top"
+          } ${align === "right" ? "right-0" : "left-0"}`}
         >
           {items.map(({ label: itemLabel, icon: Icon, onSelect, danger, disabled }) => (
             <button

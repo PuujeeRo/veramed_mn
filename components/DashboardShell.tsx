@@ -193,6 +193,7 @@ export default function DashboardShell({ brand, active, user, productCount, chil
           <Menu
             label={t("account.menu")}
             align="left"
+            side="up"
             triggerClassName="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5 text-left transition hover:bg-subtle"
             trigger={
               <>

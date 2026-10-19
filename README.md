@@ -21,6 +21,10 @@ database.
 
 ## Connect a database
 
+> **For now** the local `.env.local` shares the urgoods test database
+> (`NEXT_PUBLIC_COMPANY_ID` = its demo "Brand A"). Skip steps 2–4 below in
+> that setup — see `CLAUDE.md`. The steps are for veramed's own project.
+
 Use a **new** Supabase project — never another app's (the schema creates
 tables named `brands`, `products`, `profiles`, …).
 

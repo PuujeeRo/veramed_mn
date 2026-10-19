@@ -1,9 +1,10 @@
 "use client";
 
-// A panel that slides in from the right over the current page — for a
-// short task (add a product) that shouldn't navigate away from the list it
-// belongs to. Escape or the backdrop closes it; page scroll is locked
-// while it's open; focus moves into it and returns to the opener after.
+// A panel over the current page — for a short task (add a product) that
+// shouldn't navigate away from the list it belongs to. On phones it slides
+// in from the right as a full-height sheet; from `sm` up it is a centred
+// modal. Escape or the backdrop closes it; page scroll is locked while it's
+// open; focus moves into it and returns to the opener after.
 
 import { ReactNode, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -45,7 +46,7 @@ export default function Drawer({ open, onClose, title, description, children, fo
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-overlay">
+    <div className="fixed inset-0 z-overlay flex sm:items-center sm:justify-center sm:p-4">
       <div
         aria-hidden="true"
         onClick={onClose}
@@ -57,7 +58,7 @@ export default function Drawer({ open, onClose, title, description, children, fo
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-surface shadow-pop focus:outline-none motion-safe:animate-slide-in-right"
+        className="absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-surface shadow-pop focus:outline-none motion-safe:animate-slide-in-right sm:relative sm:inset-auto sm:max-h-[85dvh] sm:rounded-xl sm:border sm:border-line sm:motion-safe:animate-pop-in"
       >
         <header className="flex items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
           <div className="min-w-0">

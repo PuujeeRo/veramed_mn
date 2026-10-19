@@ -127,7 +127,9 @@ export async function getCompany(): Promise<Brand> {
   const { data, error } = await supabase.from("brands").select("*").eq("id", COMPANY_ID).maybeSingle();
   if (error) throw error;
   if (!data) {
-    throw new Error("Company row not found — run `node scripts/seed-supabase.mjs` against this database.");
+    throw new Error(
+      `Company row not found (looked for id ${JSON.stringify(COMPANY_ID)}) — run \`node scripts/seed-supabase.mjs\` against this database.`
+    );
   }
   return toBrand(data as BrandRow);
 }

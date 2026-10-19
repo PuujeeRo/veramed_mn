@@ -6,9 +6,11 @@
 // in `brands`, and it has this id. Nothing in the app looks a company up by
 // slug or lets a visitor pick one.
 //
-// Must match supabase/seed.json's company.id.
+// Must match supabase/seed.json's company.id — unless NEXT_PUBLIC_COMPANY_ID
+// points the site at an existing brands row instead (e.g. a shared test
+// database that already holds another app's demo brand).
 
-export const COMPANY_ID = "00000000-0000-4000-8000-000000000001";
+export const COMPANY_ID = process.env.NEXT_PUBLIC_COMPANY_ID || "00000000-0000-4000-8000-000000000001";
 
 /** False until .env.local has real Supabase keys. While false, the public
  *  pages render supabase/seed.json's sample content (lib/data.ts) so the
